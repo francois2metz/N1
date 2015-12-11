@@ -87,7 +87,7 @@ class FileUploadTask extends Task
     # Since we requested `json:false` the response will come back as
     # a raw string.
     json = JSON.parse(rawResponseString)
-    file = (new File).fromJSON(json[0])
+    file = File.fromJSON(json[0])
     Promise.resolve(file)
 
   _performRemoteAttachFile: (file) =>

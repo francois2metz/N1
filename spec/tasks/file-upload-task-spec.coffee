@@ -39,7 +39,7 @@ testResponse = '[
         "size": 19013
     }
 ]'
-equivalentFile = (new File).fromJSON(JSON.parse(testResponse)[0])
+equivalentFile = File.fromJSON(JSON.parse(testResponse)[0])
 
 DATE = 1433963615918
 

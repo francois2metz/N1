@@ -303,9 +303,11 @@ class NylasAPI
           json._delta?.ignoredBecause = "JSON v#{json.version} <= model v#{model.version}"
         else if isAlreadySent
           json._delta?.ignoredBecause = "Model #{model.id} is already sent!"
+        else if model
+          model = model.updateFromJSON(json)
+          changedModels.push(model)
         else
-          model ?= new klass()
-          model.fromJSON(json)
+          model = klass.fromJSON(json)
           changedModels.push(model)
         responseModels.push(model)
 

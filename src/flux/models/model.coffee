@@ -1,6 +1,7 @@
 _ = require 'underscore'
 Utils = require './utils'
 Attributes = require '../attributes'
+Immutable = require 'immutable'
 
 ###
 Public: A base class for API objects that provides abstract support for
@@ -62,25 +63,40 @@ class Model
 
   @naturalSortOrder: -> null
 
+  @seal: ->
+    return if @sealed
+    @sealed = true
+    Object.keys(@attributes).forEach (key) =>
+      return if key in ['id']
+      Object.defineProperty @prototype, key,
+        enumerable: false
+        get: -> @_values.get(key)
+        set: ->
+          throw new Error("Models are immutable. Call model.update instead.")
+
+  @fromJSON: (json) ->
+    (new @).updateFromJSON(json)
+
+  @fromValues: (values) ->
+    new @(values)
+
   constructor: (values = {}) ->
+    @constructor.seal()
+
     if values["id"] and Utils.isTempId(values["id"])
       values["clientId"] ?= values["id"]
     else
       values["serverId"] ?= values["id"]
+    values["clientId"] ?= Utils.generateTempId()
 
-    for key in Object.keys(@constructor.attributes)
-      continue if key is 'id'
-      continue unless values[key]?
-      @[key] = values[key]
-
-    @clientId ?= Utils.generateTempId()
+    @_values = Immutable.Map(values)
     @
 
   isSaved: ->
     @serverId?
 
   clone: ->
-    (new @constructor).fromJSON(@toJSON())
+    @
 
   # Public: Returns an {Array} of {Attribute} objects defined on the Model's constructor
   #
@@ -88,6 +104,9 @@ class Model
     attrs = _.clone(@constructor.attributes)
     delete attrs["id"]
     return attrs
+
+  update: (newValues) ->
+    return new @constructor(@_values.merge(newValues))
 
   ##
   # Public: Inflates the model object from JSON, using the defined attributes to
@@ -97,18 +116,19 @@ class Model
   #
   # This method is chainable.
   #
-  fromJSON: (json) ->
+  updateFromJSON: (json) ->
     # Note: The loop in this function has been optimized for the V8 'fast case'
     # https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
     #
+    newValues = {}
     if json["id"] and not Utils.isTempId(json["id"])
-      @serverId = json["id"]
+      newValues.serverId = json["id"]
     for key in Object.keys(@constructor.attributes)
       continue if key is 'id'
       attr = @constructor.attributes[key]
       attrValue = json[attr.jsonKey]
-      @[key] = attr.fromJSON(attrValue) unless attrValue is undefined
-    @
+      newValues[key] = attr.fromJSON(attrValue) unless attrValue is undefined
+    return @update(newValues)
 
   # Public: Deflates the model to a plain JSON object. Only attributes defined
   # on the model are included in the JSON.

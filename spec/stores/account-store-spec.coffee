@@ -36,8 +36,8 @@ describe "AccountStore", ->
     @instance = new @constructor
 
     expect(@instance.items()).toEqual([
-      (new Account).fromJSON(accounts[0]),
-      (new Account).fromJSON(accounts[1])
+      Account.fromJSON(accounts[0]),
+      Account.fromJSON(accounts[1])
     ])
     expect(@instance.current() instanceof Account).toBe(true)
     expect(@instance.current().id).toEqual(accounts[1]['id'])
@@ -74,7 +74,7 @@ describe "AccountStore", ->
       expect(@instance._tokens["1234"]).toBe "auth-123"
 
     it "sets the accounts", ->
-      account = (new Account).fromJSON(@json)
+      account = Account.fromJSON(@json)
       expect(@instance._accounts.length).toBe 1
       expect(@instance._accounts[0]).toEqual account
 

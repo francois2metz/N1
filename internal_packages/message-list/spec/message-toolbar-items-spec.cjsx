@@ -6,13 +6,13 @@ TestUtils = React.addons.TestUtils
 StarButton = require '../lib/thread-star-button'
 ThreadToggleUnreadButton = require '../lib/thread-toggle-unread-button'
 
-test_thread = (new Thread).fromJSON({
+test_thread = Thread.fromJSON({
   "id" : "thread_12345"
   "subject" : "Subject 12345"
   "starred": false
 })
 
-test_thread_starred = (new Thread).fromJSON({
+test_thread_starred = Thread.fromJSON({
   "id" : "thread_starred_12345"
   "subject" : "Subject 12345"
   "starred": true
@@ -61,4 +61,3 @@ describe "MessageToolbarItem marking as unread", ->
     ReactTestUtils.Simulate.click React.findDOMNode(markUnreadBtn).childNodes[0]
 
     expect(Actions.popSheet).toHaveBeenCalled()
-

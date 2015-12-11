@@ -51,7 +51,7 @@ user_5 = new Contact
   name: "User Five"
   email: "user5@nylas.com"
 
-m1 = (new Message).fromJSON({
+m1 = Message.fromJSON({
   "id"   : "111",
   "from" : [ user_1 ],
   "to"   : [ user_2 ],
@@ -68,7 +68,7 @@ m1 = (new Message).fromJSON({
   "thread_id" : "thread_12345",
   "account_id" : TEST_ACCOUNT_ID
 })
-m2 = (new Message).fromJSON({
+m2 = Message.fromJSON({
   "id"   : "222",
   "from" : [ user_2 ],
   "to"   : [ user_1 ],
@@ -85,7 +85,7 @@ m2 = (new Message).fromJSON({
   "thread_id" : "thread_12345",
   "account_id" : TEST_ACCOUNT_ID
 })
-m3 = (new Message).fromJSON({
+m3 = Message.fromJSON({
   "id"   : "333",
   "from" : [ user_3 ],
   "to"   : [ user_1 ],
@@ -102,7 +102,7 @@ m3 = (new Message).fromJSON({
   "thread_id" : "thread_12345",
   "account_id" : TEST_ACCOUNT_ID
 })
-m4 = (new Message).fromJSON({
+m4 = Message.fromJSON({
   "id"   : "444",
   "from" : [ user_4 ],
   "to"   : [ user_1 ],
@@ -119,7 +119,7 @@ m4 = (new Message).fromJSON({
   "thread_id" : "thread_12345",
   "account_id" : TEST_ACCOUNT_ID
 })
-m5 = (new Message).fromJSON({
+m5 = Message.fromJSON({
   "id"   : "555",
   "from" : [ user_1 ],
   "to"   : [ user_4 ],
@@ -138,7 +138,7 @@ m5 = (new Message).fromJSON({
 })
 testMessages = [m1, m2, m3, m4, m5]
 draftMessages = [
-  (new Message).fromJSON({
+  Message.fromJSON({
     "id"   : "666",
     "from" : [ user_1 ],
     "to"   : [ ],
@@ -157,7 +157,7 @@ draftMessages = [
   }),
 ]
 
-test_thread = (new Thread).fromJSON({
+test_thread = Thread.fromJSON({
   "id": "12345"
   "id" : "thread_12345"
   "subject" : "Subject 12345"

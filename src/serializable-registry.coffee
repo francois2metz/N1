@@ -25,8 +25,7 @@ class SerializableRegistry
     if not _.isFunction(constructor)
       throw new Error "Unsure of how to inflate #{JSON.stringify(data)}"
 
-    object = new constructor()
-    object.fromJSON(data)
+    object = constructor.fromJSON(data)
 
     return object
 

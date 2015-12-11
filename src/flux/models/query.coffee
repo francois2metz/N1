@@ -179,11 +179,12 @@ class ModelQuery
       try
         objects = result.map (row) =>
           json = JSON.parse(row['data'], Utils.registeredObjectReviver)
-          object = (new @_klass).fromJSON(json)
           for attr in @_includeJoinedData
             value = row[attr.jsonKey]
             value = null if value is AttributeJoinedData.NullPlaceholder
-            object[attr.modelKey] = value
+            json[attr.jsonKey] = value
+          console.log(@_klass)
+          object = @_klass.fromJSON(json)
           object
       catch jsonError
         throw new Error("Query could not parse the database result. Query: #{@sql()}, Error: #{jsonError.toString()}")

@@ -66,7 +66,7 @@ class SearchView extends ModelView
       @_queryResultTotal = json.length
 
       for resultJSON in json
-        obj = (new Thread).fromJSON(resultJSON)
+        obj = Thread.fromJSON(resultJSON)
         objects.push(obj)
 
       if objects.length > 0

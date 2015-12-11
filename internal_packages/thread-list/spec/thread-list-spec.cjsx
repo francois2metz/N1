@@ -35,7 +35,7 @@ ParticipantsItem = React.createClass
   render: -> <div></div>
 
 test_threads = -> [
-  (new Thread).fromJSON({
+  Thread.fromJSON({
     "id": "111",
     "object": "thread",
     "created_at": null,
@@ -91,7 +91,7 @@ test_threads = -> [
     ],
     "last_message_received_timestamp": 1415742036
   }),
-  (new Thread).fromJSON({
+  Thread.fromJSON({
     "id": "222",
     "object": "thread",
     "created_at": null,
@@ -141,7 +141,7 @@ test_threads = -> [
     ],
     "last_message_received_timestamp": 1415741913
   }),
-  (new Thread).fromJSON({
+  Thread.fromJSON({
     "id": "333",
     "object": "thread",
     "created_at": null,

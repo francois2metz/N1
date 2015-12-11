@@ -23,7 +23,7 @@ user_5 =
 
 many_users = (new Contact({name: "User #{i}", email:"#{i}@app.com"}) for i in [0..100])
 
-test_message = (new Message).fromJSON({
+test_message = Message.fromJSON({
   "id"   : "111",
   "from" : [ user_1 ],
   "to"   : [ user_2 ],
@@ -31,7 +31,7 @@ test_message = (new Message).fromJSON({
   "bcc"  : [ user_5 ]
 })
 
-big_test_message = (new Message).fromJSON({
+big_test_message = Message.fromJSON({
   "id"   : "222",
   "from" : [ user_1 ],
   "to"   : many_users

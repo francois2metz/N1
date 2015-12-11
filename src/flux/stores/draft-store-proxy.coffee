@@ -63,8 +63,8 @@ class DraftChangeSet
 
   applyToModel: (model) =>
     if model
-      model.fromJSON(@_saving)
-      model.fromJSON(@_pending)
+      model = model.updateFromJSON(@_saving)
+      model = model.updateFromJSON(@_pending)
     model
 
 ###

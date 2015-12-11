@@ -84,7 +84,7 @@ class SendDraftTask extends Task
       # We then save the model again (keyed by its clientId) to indicate
       # that it is no longer a draft, but rather a Message (draft: false)
       # with a valid serverId.
-      @draft = @draft.clone().fromJSON(json)
+      @draft = @draft.updateFromJSON(json)
       @draft.draft = false
       DatabaseStore.inTransaction (t) =>
         t.persistModel(@draft)

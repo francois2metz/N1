@@ -77,7 +77,7 @@ describe "Event", ->
     expect(e1.participants[2].status).toBe "no"
 
   it "accepts a JSON response", ->
-    e1 = (new Event).fromJSON(json_event)
+    e1 = Event.fromJSON(json_event)
     expect(e1.title).toBe "Meeting with Ben Bitdiddle"
     expect(e1.description).toBe ''
     expect(e1.location).toBe ''

@@ -13,7 +13,7 @@ describe "Contact", ->
     expect(c1.email).toBe "evan@nylas.com"
 
   it "accepts a JSON response", ->
-    c1 = (new Contact).fromJSON(contact_1)
+    c1 = Contact.fromJSON(contact_1)
     expect(c1.name).toBe "Evan Morikawa"
     expect(c1.email).toBe "evan@nylas.com"
 

@@ -70,7 +70,7 @@ class AccountStore
   _load: =>
     @_accounts = []
     for json in NylasEnv.config.get(saveObjectsKey) || []
-      @_accounts.push((new Account).fromJSON(json))
+      @_accounts.push(Account.fromJSON(json))
 
     index = NylasEnv.config.get(saveIndexKey) || 0
     @_index = Math.min(@_accounts.length - 1, Math.max(0, index))
@@ -117,7 +117,7 @@ class AccountStore
       throw new Error("Returned account data is invalid")
     return if @_tokens[json.id]
     @_tokens[json.id] = json.auth_token
-    @_accounts.push((new Account).fromJSON(json))
+    @_accounts.push(Account.fromJSON(json))
     @_save()
     @onSelectAccountId(json.id)
 
@@ -169,7 +169,7 @@ class AccountStore
     filenames = fs.readdirSync(path.join(dir, 'threads'))
     for filename in filenames
       threadJSON = fs.readFileSync(path.join(dir, 'threads', filename))
-      threadMessages = JSON.parse(threadJSON).map (j) -> (new Message).fromJSON(j)
+      threadMessages = JSON.parse(threadJSON).map (j) -> Message.fromJSON(j)
       threadLabels = []
       threadParticipants = []
       threadAttachment = false

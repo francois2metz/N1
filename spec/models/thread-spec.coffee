@@ -14,8 +14,7 @@ describe 'Thread', ->
       while iterations < 1000000
         if _.isString(json)
           data = JSON.parse(json)
-        object = new Thread()
-        object.fromJSON(data)
+        object = Thread.fromJSON(data)
         object
         iterations += 1
       console.log((Date.now() - start) / 1000.0 + "ms per 1000")
