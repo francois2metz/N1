@@ -25,16 +25,125 @@ DatabasePhase =
   Ready: 'ready'
   Close: 'close'
 
-DEBUG_TO_LOG = false
+DEBUG_TO_LOG = true
 DEBUG_QUERY_PLANS = NylasEnv.inDevMode()
 DEBUG_MISSING_ACCOUNT_ID = false
 
 BEGIN_TRANSACTION = 'BEGIN TRANSACTION'
 COMMIT = 'COMMIT'
 
+TXINDEX = 0
+
 class JSONBlobQuery extends ModelQuery
   formatResultObjects: (objects) =>
     return objects[0]?.json || null
+
+
+class DatabaseTransaction
+  constructor: (@database) ->
+  find: (args...) => @database.find(args...)
+  findBy: (args...) => @database.findBy(args...)
+  findAll: (args...) => @database.findAll(args...)
+  count: (args...) => @database.count(args...)
+  findJSONBlob: (args...) => @database.findJSONBlob(args...)
+
+  execute: (fn) =>
+    @_changeRecords = []
+    start = Date.now()
+    @database._query("BEGIN EXCLUSIVE TRANSACTION")
+    .then =>
+      fn(@)
+    .finally =>
+      console.log("Held transaction lock for #{Date.now() - start} on wall clock")
+      @database._query("COMMIT")
+      global.setImmediate =>
+        for record in @_changeRecords
+          @database._accumulateAndTrigger(record)
+
+  # Mutating the Database
+
+  persistJSONBlob: (id, json) ->
+    JSONBlob = require '../models/json-blob'
+    @persistModel(new JSONBlob({id, json}))
+
+  # Public: Asynchronously writes `model` to the cache and triggers a change event.
+  #
+  # - `model` A {Model} to write to the database.
+  #
+  # Returns a {Promise} that
+  #   - resolves after the database queries are complete and any listening
+  #     database callbacks have finished
+  #   - rejects if any databse query fails or one of the triggering
+  #     callbacks failed
+  persistModel: (model) =>
+    unless model and model instanceof Model
+      throw new Error("DatabaseStore::persistModel - You must pass an instance of the Model class.")
+    @persistModels([model])
+
+  # Public: Asynchronously writes `models` to the cache and triggers a single change
+  # event. Note: Models must be of the same class to be persisted in a batch operation.
+  #
+  # - `models` An {Array} of {Model} objects to write to the database.
+  #
+  # Returns a {Promise} that
+  #   - resolves after the database queries are complete and any listening
+  #     database callbacks have finished
+  #   - rejects if any databse query fails or one of the triggering
+  #     callbacks failed
+  persistModels: (models=[], {}) =>
+    return Promise.resolve() if models.length is 0
+
+    klass = models[0].constructor
+    clones = []
+    ids = {}
+
+    unless models[0] instanceof Model
+      throw new Error("DatabaseStore::persistModels - You must pass an array of items which descend from the Model class.")
+
+    for model in models
+      unless model and model.constructor is klass
+        throw new Error("DatabaseStore::persistModels - When you batch persist objects, they must be of the same type")
+      if ids[model.id]
+        throw new Error("DatabaseStore::persistModels - You must pass an array of models with different ids. ID #{model.id} is in the set multiple times.")
+
+      clones.push(model.clone())
+      ids[model.id] = true
+
+    # Note: It's important that we clone the objects since other code could mutate
+    # them during the save process. We want to guaruntee that the models you send to
+    # persistModels are saved exactly as they were sent.
+    metadata =
+      objectClass: clones[0].constructor.name
+      objectIds: Object.keys(ids)
+      objects: clones
+      type: 'persist'
+
+    @database.runMutationHooks('beforeDatabaseChange', metadata).then (data) =>
+      @database._writeModels(clones).then =>
+        @database.runMutationHooks('afterDatabaseChange', metadata, data)
+        @_changeRecords.push(metadata)
+
+  # Public: Asynchronously removes `model` from the cache and triggers a change event.
+  #
+  # - `model` A {Model} to write to the database.
+  #
+  # Returns a {Promise} that
+  #   - resolves after the database queries are complete and any listening
+  #     database callbacks have finished
+  #   - rejects if any databse query fails or one of the triggering
+  #     callbacks failed
+  unpersistModel: (model) =>
+    model = model.clone()
+    metadata =
+      objectClass: model.constructor.name,
+      objectIds: [model.id]
+      objects: [model],
+      type: 'unpersist'
+
+    @database.runMutationHooks('beforeDatabaseChange', metadata).then (data) =>
+      @database._deleteModel(model).then =>
+        @database.runMutationHooks('afterDatabaseChange', metadata, data)
+        @_changeRecords.push(metadata)
 
 ###
 Public: N1 is built on top of a custom database layer modeled after
@@ -64,6 +173,7 @@ _onDataChanged: (change) ->
   # Refresh Data
 
 ```
+
 
 The local cache changes very frequently, and your stores and components should
 carefully choose when to refresh their data. The `change` object passed to your
@@ -404,91 +514,6 @@ class DatabaseStore extends NylasStore
       result = modelQuery.formatResultObjects(result) unless options.format is false
       Promise.resolve(result)
 
-  # Public: Asynchronously writes `model` to the cache and triggers a change event.
-  #
-  # - `model` A {Model} to write to the database.
-  #
-  # Returns a {Promise} that
-  #   - resolves after the database queries are complete and any listening
-  #     database callbacks have finished
-  #   - rejects if any databse query fails or one of the triggering
-  #     callbacks failed
-  persistModel: (model) =>
-    unless model and model instanceof Model
-      throw new Error("DatabaseStore::persistModel - You must pass an instance of the Model class.")
-    @persistModels([model])
-
-  # Public: Asynchronously writes `models` to the cache and triggers a single change
-  # event. Note: Models must be of the same class to be persisted in a batch operation.
-  #
-  # - `models` An {Array} of {Model} objects to write to the database.
-  #
-  # Returns a {Promise} that
-  #   - resolves after the database queries are complete and any listening
-  #     database callbacks have finished
-  #   - rejects if any databse query fails or one of the triggering
-  #     callbacks failed
-  persistModels: (models=[]) =>
-    return Promise.resolve() if models.length is 0
-
-    klass = models[0].constructor
-    clones = []
-    ids = {}
-
-    unless models[0] instanceof Model
-      throw new Error("DatabaseStore::persistModels - You must pass an array of items which descend from the Model class.")
-
-    for model in models
-      unless model and model.constructor is klass
-        throw new Error("DatabaseStore::persistModels - When you batch persist objects, they must be of the same type")
-      if ids[model.id]
-        throw new Error("DatabaseStore::persistModels - You must pass an array of models with different ids. ID #{model.id} is in the set multiple times.")
-
-      clones.push(model.clone())
-      ids[model.id] = true
-
-    # Note: It's important that we clone the objects since other code could mutate
-    # them during the save process. We want to guaruntee that the models you send to
-    # persistModels are saved exactly as they were sent.
-
-    @atomicMutation =>
-      metadata =
-        objectClass: clones[0].constructor.name
-        objectIds: Object.keys(ids)
-        objects: clones
-        type: 'persist'
-      @_runMutationHooks('beforeDatabaseChange', metadata).then (data) =>
-        @_writeModels(clones).then =>
-          @_runMutationHooks('afterDatabaseChange', metadata, data)
-          @_accumulateAndTrigger(metadata)
-
-  # Public: Asynchronously removes `model` from the cache and triggers a change event.
-  #
-  # - `model` A {Model} to write to the database.
-  #
-  # Returns a {Promise} that
-  #   - resolves after the database queries are complete and any listening
-  #     database callbacks have finished
-  #   - rejects if any databse query fails or one of the triggering
-  #     callbacks failed
-  unpersistModel: (model) =>
-    model = model.clone()
-
-    @atomicMutation =>
-      metadata =
-        objectClass: model.constructor.name,
-        objectIds: [model.id]
-        objects: [model],
-        type: 'unpersist'
-      @_runMutationHooks('beforeDatabaseChange', metadata).then (data) =>
-        @_deleteModel(model).then =>
-          @_runMutationHooks('afterDatabaseChange', metadata, data)
-          @_accumulateAndTrigger(metadata)
-
-  persistJSONBlob: (id, json) ->
-    JSONBlob = require '../models/json-blob'
-    @persistModel(new JSONBlob({id, json}))
-
   findJSONBlob: (id) ->
     JSONBlob = require '../models/json-blob'
     new JSONBlobQuery(JSONBlob, @).where({id}).one()
@@ -513,7 +538,7 @@ class DatabaseStore extends NylasStore
   removeMutationHook: (hook) ->
     @_databaseMutationHooks = _.without(@_databaseMutationHooks, hook)
 
-  _runMutationHooks: (selectorName, metadata, data = []) ->
+  runMutationHooks: (selectorName, metadata, data = []) ->
     beforePromises = @_databaseMutationHooks.map (hook, idx) =>
       Promise.try =>
         hook[selectorName](@_query, metadata, data[idx])
@@ -523,29 +548,10 @@ class DatabaseStore extends NylasStore
         console.warn("DatabaseStore Hook: #{selectorName} failed", e)
       Promise.resolve([])
 
-  atomically: (fn) =>
-    @_atomicallyQueue ?= new PromiseQueue(1, Infinity)
-    @_atomicallyQueue.add(=> @_ensureInTransaction(fn))
-
-  atomicMutation: (fn) =>
-    @_mutationQueue ?= new PromiseQueue(1, Infinity)
-    @_mutationQueue.add(=> @_ensureInTransaction(fn))
-
-  _ensureInTransaction: (fn) ->
-    return fn() if @_inTransaction
-    @_wrapInTransaction(fn)
-
-  _wrapInTransaction: (fn) ->
-    @_inTransaction = true
-    @_query("BEGIN EXCLUSIVE TRANSACTION")
-    .then =>
-      # NOTE: The value that `fn` resolves to is propagated all the way back to
-      # the originally caller of `atomically`
-      fn()
-    .finally (val) =>
-      @_query("COMMIT")
-      @_inTransaction = false
-
+  inTransaction: (fn) ->
+    t = new DatabaseTransaction(@)
+    @_transactionQueue ?= new PromiseQueue(1, Infinity)
+    @_transactionQueue.add -> t.execute(fn)
 
   ########################################################################
   ########################### PRIVATE METHODS ############################

@@ -209,7 +209,8 @@ class NylasSyncWorker
 
   writeState: ->
     @_writeState ?= _.debounce =>
-      DatabaseStore.persistJSONBlob("NylasSyncWorker:#{@_account.id}", @_state)
+      DatabaseStore.inTransaction (t) =>
+        t.persistJSONBlob("NylasSyncWorker:#{@_account.id}", @_state)
     ,100
     @_writeState()
 

@@ -29,7 +29,8 @@ class DestroyCategoryTask extends Task
     if not @category
       return Promise.reject(new Error("Attempt to call DestroyCategoryTask.performLocal without @category."))
     @category.isDeleted = true
-    DatabaseStore.persistModel @category
+    DatabaseStore.inTransaction (t) ->
+      t.persistModel(@category)
 
   performRemote: ->
     if not @category
@@ -54,7 +55,9 @@ class DestroyCategoryTask extends Task
       if err.statusCode in NylasAPI.PermanentErrorCodes
         # Revert isDeleted flag
         @category.isDeleted = false
-        DatabaseStore.persistModel(@category).then =>
+        DatabaseStore.inTransaction (t) ->
+          t.persistModel(@category)
+        .then =>
           NylasEnv.emitError(
             new Error("Deleting category responded with #{err.statusCode}!")
           )
