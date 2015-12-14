@@ -185,11 +185,13 @@ function bootstrap() {
   internalPackages = fs.readdirSync('internal_packages');
   internalPackages.forEach(function(dir) {
     var dirPackageJSONPath = path.join(internalPackagesDir, dir, 'package.json');
+    console.log("Looking for "+dirPackageJSONPath)
     // On windows and linux, invoking the apm command is very slow even when there are no
     // dependencies. Make it faster by not calling unless we find there are deps.
     if (fs.existsSync(dirPackageJSONPath)) {
       var dirPackageJSON = JSON.parse(fs.readFileSync(dirPackageJSONPath));
       if (dirPackageJSON.dependencies && (Object.keys(dirPackageJSON.dependencies).length > 0)) {
+        console.log("---> Going to install dependencies for "+dirPackageJSONPath)
         commands.push({
           command: apmInstallCommand,
           message: "Installing dependencies for "+dir,
